@@ -1,0 +1,18 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+
+# Logs
+*.log
+chronos-ad-debug.log
+
+# Backups locais
+*.bak
+*.bak-*
+
+# Config local (não comitar customizações pessoais)
+config.local.sh
