@@ -12,9 +12,19 @@ Max 20x · Opus 4.7 (1M ctx) | Ctx: ██░░░░░░░░░░ 15% | 5
 
 ## A dor que motivou esta ferramenta
 
-42 dias usando Claude Code intensivamente. Mais de 10 horas por dia. Vibe coding na veia.
+**Como o Chronos nasceu**
 
-Em algum momento, percebi que o Claude marcava reuniões em datas erradas. Confundia "ontem" com "hoje". Achava que era segunda quando era quinta. Em projetos longos onde data e fuso importam — lançamentos, eventos, deadlines, dayparting de campanhas — esses pequenos erros se acumulavam silenciosamente até virar problema sério.
+Em 26 de janeiro de 2026, o Claude Code foi instalado neste computador e ficou parado. Havia estranhamento, alguma dificuldade e a sensação de uma ferramenta feita para outro tipo de pessoa. Quem escreve aqui não é desenvolvedor.
+
+No início de abril, ficou impossível ignorar o que ela abria. Começou o uso de verdade: mais de 10 horas por dia, batendo a cabeça, refazendo e aprendendo a lógica formal das coisas com as ferramentas disponíveis.
+
+Em 14 de maio, depois de 42 dias desse uso, nasceu o Chronos. O Claude não sabia que horas eram nem onde estava, e isso custava caro.
+
+Depois vieram as expansões que o próprio uso pediu: em 9 de agosto, o controle do consumo de contexto; em 20 de agosto, a identificação da janela, criada para o nosso protocolo de despacho de sessões, o Mata-Pendências. Num loop entre janelas, cada uma precisa saber quem fala com quem e quem assume qual papel.
+
+O ponto não é ter chegado primeiro. É mostrar que, sem ser desenvolvedor, com trabalho constante e as ferramentas certas, dá para construir arquitetura, engenharia e um harness eficiente, e ir além.
+
+Em algum momento, percebi que o Claude marcava reuniões em datas erradas. Confundia "ontem" com "hoje". Achava que era segunda quando era quinta. Em projetos longos onde data e fuso importam (lançamentos, eventos, deadlines, dayparting de campanhas), esses pequenos erros se acumulavam silenciosamente até virar problema sério.
 
 A causa raiz: **o Claude Code, em si, não tem ancoragem temporal nativa**. Ele sabe a data de corte do treinamento. Sabe um pouco de fuso. Mas não enxerga o calendário, não vê o dia da semana, não distingue automaticamente entre seu fuso local e o fuso de quem está do outro lado do mundo.
 
@@ -23,6 +33,8 @@ Para um usuário casual, isso não é problema. Para quem usa o Claude Code como
 O **Chronos AD** existe para tapar esse buraco. A solução é simples: **mostrar o tempo o tempo todo, na cara, onde o Claude e você possam ver**.
 
 Não é decoração visual. É infraestrutura de contexto.
+
+*«Um ser humano íntegro de si mesmo, sabedor de quem é, é uma ponte, é uma expansão.»*
 
 ---
 
@@ -61,14 +73,38 @@ Pro · Sonnet 4.6 | Ctx: ██░░░░░░░░░░ 18% | 5h: 12% | 7d
 
 ---
 
+## Evolução
+
+| Data        | Marco                                                              |
+|-------------|--------------------------------------------------------------------|
+| 14/Mai/2026 | Primeira versão: hora, fuso, localização e data na barra de status |
+| 09/Ago/2026 | Controle do consumo de contexto: a sentinela                       |
+| 20/Ago/2026 | Identificação da janela                                            |
+
+Os dois últimos nasceram no uso diário e chegam a este repositório na versão 1.1.0, como módulos opcionais.
+
+### Por que identificar a janela
+
+Com a possibilidade de usar loops e de fazer janelas conversarem entre si, identificar cada janela se mostrou necessário. A identificação nasceu para o nosso protocolo de despacho de sessões, o Mata-Pendências, em que uma janela distribui o trabalho e as outras executam. Para um loop entre janelas funcionar, nada melhor do que deixar claro quem fala com quem e quem assume qual papel.
+
+A lógica é a de qualquer conversa com mais de dois participantes: cada um precisa de um nome que os outros consigam usar. O Chronos não inventa esse nome. Usa o que o ambiente já oferece (a posição da aba no iTerm2, o terminal do sistema, o início do identificador da sessão) e o coloca na barra, onde você e o Claude enxergam.
+
+### Por que controlar o contexto
+
+A barra de status recebe, a cada atualização, quanto do contexto e dos limites de uso já foi consumido. A sentinela grava esse número e, por meio de um hook, avisa o Claude uma vez em cada faixa: 70% e 85% de contexto, 85% da janela de 5 horas, 80% do limite semanal. No resto do tempo, fica em silêncio. Aviso contínuo vira ruído; aviso na hora certa vira decisão: registrar o estado do trabalho antes da compactação, delegar uma leitura longa, passar a um modelo mais leve.
+
+---
+
 ## Funcionalidades
 
 - **Hora primária e secundária** alinhadas à direita do terminal
 - **Localização customizável** (cidade/região no ícone 📍)
 - **Dia da semana + data** em qualquer idioma (PT-BR, ES, EN, IT)
 - **Detecção automática da largura do terminal** via TTY do processo pai — funciona mesmo quando o Claude Code não passa a largura no JSON de entrada
-- **Instalador interativo** com 12 perguntas (Enter aceita defaults inteligentes)
+- **Instalador interativo** com 14 perguntas (Enter aceita defaults inteligentes)
 - **Identidade por diretório** opcional — emoji + cor diferentes por projeto
+- **Identificação da janela** opcional: posição da aba, TTY ou início do `session_id`, para quem opera várias janelas ao mesmo tempo
+- **Sentinela de contexto** opcional: avisa o Claude uma vez em cada faixa de consumo
 - **Degradação graciosa** em terminais estreitos
 - **Semáforo de contexto** — barra de uso muda de amarelo → laranja → vermelho
 - **Modo debug** opcional para diagnosticar problemas
@@ -97,7 +133,7 @@ cd chronos-ad
 bash install.sh
 ```
 
-O instalador faz 12 perguntas (fuso, localização, idioma da data, cor, etc.) com defaults inteligentes — Enter aceita o default. Tudo é gravado em `~/.config/chronos-ad/config.sh` e fica editável depois.
+O instalador faz 14 perguntas (fuso, localização, idioma da data, cor, módulos opcionais etc.) com defaults inteligentes — Enter aceita o default. Tudo é gravado em `~/.config/chronos-ad/config.sh` e fica editável depois.
 
 Ao fim, ele atualiza `~/.claude/settings.json` para apontar pra Chronos AD (preserva backup do que estava antes). Feche e reabra o Claude Code e pronto.
 
@@ -138,6 +174,9 @@ O arquivo `~/.config/chronos-ad/config.sh` aceita estas variáveis:
 | `LANG_TIME`                 | Locale para nome do dia/mês                      | `"pt_BR.UTF-8"`       |
 | `IDENTITY_COLOR`            | Cor ANSI 256 da identidade                       | `250`                 |
 | `MIN_COLS_FOR_RIGHT_BLOCK`  | Abaixo disso, omite bloco direito               | `100`                 |
+| `SHOW_WINDOW_ID`            | Mostra a identificação da janela na linha 1     | `1` ou `0`            |
+| `WINDOW_ID_PARTS`           | Partes da identificação, na ordem               | `"pos sid"`           |
+| `CONTEXT_SENTINEL`          | Grava o consumo para a sentinela de contexto    | `1` ou `0`            |
 
 Para identidade diferente por diretório (emoji + cor por projeto), descomente a função `identify_cwd()` no `config.sh` e edite os padrões:
 
@@ -155,6 +194,54 @@ identify_cwd() {
 ```
 
 Protocolo: a função retorna `"texto|cor_ansi_256"` (separador pipe). Tabela de cores ANSI 256: https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit
+
+---
+
+## Módulos opcionais
+
+Os dois vêm desligados. O instalador pergunta por eles (perguntas 13 e 14), ou você os liga no `config.sh`.
+
+### Identificação da janela
+
+```
+📂 projeto · ⧉ w1t2 · a1b2c3d4                            🕐 11:30 BR · 📍 São Paulo
+```
+
+Liga com `SHOW_WINDOW_ID=1`. As partes vêm de `WINDOW_ID_PARTS`, na ordem em que você escrever:
+
+| Parte | O que mostra                                            | Onde funciona                                                         |
+|-------|---------------------------------------------------------|-----------------------------------------------------------------------|
+| `pos` | Posição da aba: `w1t2` = janela 1, aba 2                | iTerm2. Nos demais terminais, cai para o TTY                          |
+| `tty` | Terminal do sistema: `ttys012` (macOS), `pts/3` (Linux) | Qualquer terminal; é único por aba                                    |
+| `pid` | PID do shell de login da aba, o mesmo número do `ps`    | macOS                                                                 |
+| `sid` | Os 8 primeiros caracteres do `session_id`               | Qualquer lugar; nomeia o arquivo da conversa em `~/.claude/projects/` |
+
+O padrão é `WINDOW_ID_PARTS="pos sid"`. Fora do iTerm2, o mesmo padrão mostra `⧉ ttys012 · a1b2c3d4`.
+
+- A posição `w1t2` é a do momento em que a aba foi aberta. Se você mover a aba para outra janela, o número antigo continua até abrir um terminal novo.
+- O `pid` custa algumas chamadas de `ps`; por isso fica em cache, um arquivo por sessão, em `~/.config/chronos-ad/state/window/`.
+
+### Sentinela de contexto
+
+Liga com `CONTEXT_SENTINEL=1` e precisa do hook `hooks/sentinela-contexto.sh` registrado em `UserPromptSubmit`. O instalador faz as duas coisas. Para fazer à mão, copie o hook para `~/.config/chronos-ad/` e acrescente ao `~/.claude/settings.json`:
+
+```json
+"hooks": {
+  "UserPromptSubmit": [
+    { "hooks": [ { "type": "command", "command": "bash ~/.config/chronos-ad/sentinela-contexto.sh" } ] }
+  ]
+}
+```
+
+Quando uma faixa é cruzada, o Claude recebe, junto com a sua próxima mensagem, um aviso como este:
+
+```
+## ⏳ Chronos AD · sentinela de contexto
+- Contexto acima de 70%. Evite começar leitura longa; se for necessária, delegue a um subagente.
+_Aviso único por faixa nesta sessão._
+```
+
+Cada faixa avisa uma vez por sessão. Dado com mais de 2 horas é ignorado. Os arquivos de estado ficam em `~/.config/chronos-ad/state/ctx/`, um por sessão, e podem ser apagados a qualquer momento.
 
 ---
 
@@ -211,6 +298,8 @@ No macOS, locales `pt_BR`, `es_ES`, `it_IT`, `en_US` já vêm instalados por pad
 ```bash
 # Remove a chave statusLine do settings (usando jq)
 tmp=$(mktemp) && jq 'del(.statusLine)' ~/.claude/settings.json > "$tmp" && mv "$tmp" ~/.claude/settings.json
+# Se ativou a sentinela: tira o hook dela, mantendo os demais
+tmp=$(mktemp) && jq '.hooks.UserPromptSubmit |= map(select(any(.hooks[]?; .command | test("sentinela-contexto")) | not))' ~/.claude/settings.json > "$tmp" && mv "$tmp" ~/.claude/settings.json
 # Opcional: remover instalação
 rm -rf ~/.config/chronos-ad
 ```
@@ -251,10 +340,11 @@ A capitalização do dia/mês usa Python pós-locale (`locale -a` retorna `quint
 ## Roadmap
 
 - [x] v1.0.0 — primeira release pública (Mai/2026)
-- [ ] v1.1 — versão em inglês do README + i18n
-- [ ] v1.2 — suporte a fuso de viagem com expiração automática
-- [ ] v1.3 — testes automatizados (bats) + CI no GitHub Actions
-- [ ] v1.4 — matriz de compatibilidade testada em ≥5 terminais
+- [x] v1.1.0 — identificação da janela e sentinela de contexto, como módulos opcionais (Out/2026)
+- [ ] v1.2 — versão em inglês do README + i18n
+- [ ] v1.3 — suporte a fuso de viagem com expiração automática
+- [ ] v1.4 — testes automatizados (bats) + CI no GitHub Actions
+- [ ] v1.5 — matriz de compatibilidade testada em ≥5 terminais
 - [ ] v2.0 — porta para Windows PowerShell nativo
 
 Sugestões e contribuições via issues e PRs.
@@ -273,8 +363,6 @@ Veja [CONTRIBUTING.md](CONTRIBUTING.md). Resumo:
 ---
 
 ## Origem e créditos
-
-**Origem:** descoberta na [ADisruptiva](https://adisruptiva.com), após 42 dias de uso intenso do Claude Code durante a construção do ecossistema da empresa.
 
 **Conceito:** ancoragem temporal como infraestrutura, não decoração.
 

@@ -57,6 +57,26 @@ MIN_COLS_FOR_RIGHT_BLOCK=100
 IDENTITY_COLOR=250
 
 # ─────────────────────────────────────────────────────────────────────────────
+# MÓDULOS OPCIONAIS (desligados por padrão)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Identificação da janela na linha 1 (ex: "📂 projeto · ⧉ w1t2 · a1b2c3d4").
+# Útil quando várias janelas do Claude Code trabalham juntas. 1 = mostra.
+SHOW_WINDOW_ID=0
+
+# Partes da identificação, na ordem em que aparecem:
+#   pos  posição da aba no iTerm2 (w1t2); fora do iTerm2, o TTY
+#   tty  terminal do sistema (ttys012 no macOS, pts/3 no Linux)
+#   pid  PID do shell de login da aba (macOS)
+#   sid  início do session_id do Claude Code (8 caracteres)
+WINDOW_ID_PARTS="pos sid"
+
+# Sentinela de contexto: a statusline grava o consumo por sessão e o hook
+# hooks/sentinela-contexto.sh avisa o Claude uma vez por faixa (70% e 85% de
+# contexto, 85% da janela de 5 h, 80% da semana). O instalador registra o hook.
+CONTEXT_SENTINEL=0
+
+# ─────────────────────────────────────────────────────────────────────────────
 # AVANÇADO: customizar identidade por diretório
 #
 # Descomente e edite a função abaixo para mostrar emoji + cor diferentes

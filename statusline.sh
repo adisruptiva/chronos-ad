@@ -1,15 +1,19 @@
 #!/usr/bin/env bash
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Chronos AD · ancoragem temporal e espacial para o Claude Code
-#  Versão: 1.0.0
+#  Versão: 1.1.0
 #  by ADisruptiva — https://github.com/adisruptiva/chronos-ad
 #  Licença: MIT
 # ───────────────────────────────────────────────────────────────────────────────
 #  Mostra na statusline do Claude Code:
-#    Linha 1 esquerda: identidade do diretório atual
+#    Linha 1 esquerda: identidade do diretório atual [+ identificação da janela]
 #    Linha 1 direita:  hora primária [+ secundária] · localização
 #    Linha 2 esquerda: tier · modelo · contexto · 5h · 7d
 #    Linha 2 direita:  dia da semana · data
+#
+#  Módulos opcionais (desligados por padrão, ligados no config.sh):
+#    SHOW_WINDOW_ID=1    identificação da janela na linha 1
+#    CONTEXT_SENTINEL=1  grava o consumo para o hook hooks/sentinela-contexto.sh
 #
 #  Configuração: ~/.config/chronos-ad/config.sh (opcional, defaults sensatos)
 #  Debug:        export CLAUDE_STATUSLINE_DEBUG=1 → /tmp/chronos-ad-debug.log
@@ -53,6 +57,11 @@ fi
 : "${LANG_TIME:=pt_BR.UTF-8}"                 # locale para formatação de data
 : "${MIN_COLS_FOR_RIGHT_BLOCK:=100}"          # abaixo disso, omite bloco direito
 : "${IDENTITY_COLOR:=250}"                    # ANSI 256-color default
+: "${SHOW_WINDOW_ID:=0}"                      # 1 = identificação da janela na linha 1
+: "${WINDOW_ID_PARTS:=pos sid}"               # partes, na ordem: pos · tty · pid · sid
+: "${CONTEXT_SENTINEL:=0}"                    # 1 = grava o consumo para a sentinela
+
+STATE_DIR="$HOME/.config/chronos-ad/state"
 
 input=$(cat)
 
@@ -63,6 +72,22 @@ used_pct=$(echo "$input" | jq -r '.context_window.used_percentage // empty')
 ctx_size=$(echo "$input" | jq -r '.context_window.context_window_size // empty')
 five_pct=$(echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty')
 week_pct=$(echo "$input" | jq -r '.rate_limits.seven_day.used_percentage // empty')
+# session_id vira nome de arquivo: só letras, dígitos, hífen e sublinhado
+session_id=$(echo "$input" | jq -r '.session_id // empty' | tr -cd 'A-Za-z0-9_-')
+
+# ── Sentinela de contexto (opcional) ──────────────────────────────────────────
+# A statusline recebe o consumo de contexto e dos limites a cada atualização.
+# Este bloco grava esse número por sessão; o hook hooks/sentinela-contexto.sh o
+# lê e avisa o Claude uma vez por faixa. Nunca pode quebrar a barra.
+if [[ "$CONTEXT_SENTINEL" == "1" && -n "$session_id" ]]; then
+  (
+    mkdir -p "$STATE_DIR/ctx"
+    tmpf="$STATE_DIR/ctx/.${session_id}.tmp"
+    printf '{"ctx": %s, "five_hour": %s, "seven_day": %s, "ts": %s}\n' \
+      "${used_pct:-null}" "${five_pct:-null}" "${week_pct:-null}" "$(date +%s)" > "$tmpf" \
+      && mv -f "$tmpf" "$STATE_DIR/ctx/${session_id}.json"
+  ) 2>/dev/null || true
+fi
 
 # ── Identidade do diretório atual ─────────────────────────────────────────────
 # A função identify_cwd pode ser sobrescrita no config.sh para mapear diretórios
@@ -262,6 +287,72 @@ print(f'{w} · {dm}')
 " "$WEEKDAY" "$DAY_MONTH" 2>/dev/null || echo "$WEEKDAY · $DAY_MONTH")
       right_line2=$(printf '\033[38;5;244m📅 %s\033[0m' "$DATE_CAP")
     fi
+  fi
+fi
+
+# ── Identificação da janela (opcional) ────────────────────────────────────────
+# Dá a cada janela um nome que você e o Claude conseguem usar quando várias
+# janelas trabalham juntas. Partes, na ordem de WINDOW_ID_PARTS:
+#   pos  posição da aba no iTerm2 (w1t2 = janela 1, aba 2); fora do iTerm2, o TTY
+#   tty  terminal do sistema (ttys012 no macOS, pts/3 no Linux), único por aba
+#   pid  PID do shell de login da aba (macOS), o número que aparece no `ps`
+#   sid  início do session_id, o mesmo que nomeia o arquivo da conversa
+# Só o pid custa (algumas chamadas de `ps`): fica em cache por sessão.
+_login_shell_pid() {
+  local cur="$PPID" lvl=0 line ppid comm
+  while [[ "$cur" != "1" && $lvl -lt 12 ]]; do
+    line=$(LC_ALL=C ps -o ppid=,comm= -p "$cur" 2>/dev/null) || return 1
+    [[ -z "$line" ]] && return 1
+    ppid=$(printf '%s' "$line" | awk '{print $1}')
+    comm=$(printf '%s' "$line" | sed -E 's/^[[:space:]]*[0-9]+[[:space:]]+//')
+    case "$comm" in
+      -*zsh*|-*bash*|-*fish*|-sh) printf '%s' "$cur"; return 0 ;;
+    esac
+    cur="$ppid"; lvl=$((lvl+1))
+  done
+  return 1
+}
+
+if [[ "$SHOW_WINDOW_ID" == "1" ]]; then
+  win_pos=$(printf '%s' "${ITERM_SESSION_ID:-}" | sed -n 's/^\(w[0-9]*t[0-9]*\).*/\1/p')
+  win_tty=""
+  case " $WINDOW_ID_PARTS " in
+    *" tty "*|*" pos "*)
+      if [[ -z "${parent_tty+x}" ]]; then
+        parent_tty=$(ps -o tty= -p $PPID 2>/dev/null | tr -d ' ' || true)
+      fi
+      case "$parent_tty" in ''|'?'*) ;; *) win_tty="$parent_tty" ;; esac
+      ;;
+  esac
+  wid=""
+  for part in $WINDOW_ID_PARTS; do
+    val=""
+    case "$part" in
+      pos) val="${win_pos:-$win_tty}" ;;
+      tty) val="$win_tty" ;;
+      sid) val="${session_id:0:8}" ;;
+      pid)
+        pid_cache="$STATE_DIR/window/${session_id}"
+        if [[ -n "$session_id" && -s "$pid_cache" ]]; then
+          val=$(cat "$pid_cache" 2>/dev/null || true)
+        else
+          val=$( { _login_shell_pid; } 2>/dev/null || true )
+          if [[ -n "$session_id" && -n "$val" ]]; then
+            ( mkdir -p "$STATE_DIR/window" \
+              && printf '%s' "$val" > "${pid_cache}.tmp" \
+              && mv -f "${pid_cache}.tmp" "$pid_cache" ) 2>/dev/null || true
+          fi
+        fi
+        ;;
+    esac
+    # sem repetir valor (fora do iTerm2, pos e tty coincidem)
+    if [[ -n "$val" && " $wid " != *" $val "* ]]; then
+      wid="${wid:+$wid · }$val"
+    fi
+  done
+  _debug "window_id=$wid"
+  if [[ -n "$wid" ]]; then
+    identity="${identity}$(printf '%b · ⧉ %s%b' "$dim" "$wid" "$reset")"
   fi
 fi
 

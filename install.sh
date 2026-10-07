@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Chronos AD · Instalador Interativo
-#  v1.0.0 · by ADisruptiva
+#  v1.1.0 · by ADisruptiva
 # ═══════════════════════════════════════════════════════════════════════════════
 set -euo pipefail
 
@@ -17,7 +17,7 @@ B='\033[1m'; D='\033[2m'; G='\033[0;32m'; Y='\033[0;33m'; R='\033[0;31m'; C='\03
 banner() {
   printf "\n${C}═══════════════════════════════════════════════════════════════${N}\n"
   printf "  ${B}Chronos AD${N} ${D}·${N} ancoragem temporal pro Claude Code\n"
-  printf "  ${D}v1.0.0 · by ADisruptiva · MIT License${N}\n"
+  printf "  ${D}v1.1.0 · by ADisruptiva · MIT License${N}\n"
   printf "${C}═══════════════════════════════════════════════════════════════${N}\n\n"
 }
 
@@ -77,14 +77,14 @@ if ! locale -a 2>/dev/null | grep -qi "^pt_BR"; then
   SYS_LOCALE_BASE=$(locale 2>/dev/null | grep LC_TIME | head -1 | cut -d= -f2 | tr -d '"' | cut -d. -f1 || echo "en_US")
 fi
 
-printf "${B}→ Personalização da Chronos AD ${D}(12 perguntas · Enter aceita o default)${N}\n\n"
+printf "${B}→ Personalização da Chronos AD ${D}(14 perguntas · Enter aceita o default)${N}\n\n"
 
 # ── 1. Tier ───────────────────────────────────────────────────────────────────
-printf "${D}[1/12]${N} "
+printf "${D}[1/14]${N} "
 ask "Seu plano Claude (aparece antes do modelo, vazio = omite)?" "" TIER
 
 # ── 2. Fuso primário ──────────────────────────────────────────────────────────
-printf "${D}[2/12]${N} "
+printf "${D}[2/14]${N} "
 ask "Fuso primário (formato IANA, ex: America/Sao_Paulo)?" "$SYS_TZ" PRIMARY_TZ
 if [[ ! -f "/usr/share/zoneinfo/$PRIMARY_TZ" ]]; then
   printf "  ${Y}⚠ Aviso: '/usr/share/zoneinfo/$PRIMARY_TZ' não existe — verifique se é válido.${N}\n"
@@ -92,53 +92,63 @@ fi
 
 # ── 3. Label primário ─────────────────────────────────────────────────────────
 DEFAULT_LABEL=$(echo "$PRIMARY_TZ" | awk -F/ '{print $1}' | cut -c1-2 | tr '[:lower:]' '[:upper:]')
-printf "${D}[3/12]${N} "
+printf "${D}[3/14]${N} "
 ask "Rótulo curto do fuso primário (ex: BR, PT, ES)?" "$DEFAULT_LABEL" PRIMARY_TZ_LABEL
 
 # ── 4. Fuso secundário ────────────────────────────────────────────────────────
-printf "${D}[4/12]${N} "
+printf "${D}[4/14]${N} "
 ask_yn "Quer mostrar um SEGUNDO fuso (útil entre 2 países)?" "n" HAS_SECONDARY
 
 SECONDARY_TZ=""
 SECONDARY_TZ_LABEL=""
 if [[ "$HAS_SECONDARY" == "1" ]]; then
-  printf "${D}[5/12]${N} "
+  printf "${D}[5/14]${N} "
   ask "Qual fuso secundário (ex: Europe/Rome, America/New_York)?" "Europe/Rome" SECONDARY_TZ
 
   DEFAULT_SEC_LABEL=$(echo "$SECONDARY_TZ" | awk -F/ '{print $1}' | cut -c1-2 | tr '[:lower:]' '[:upper:]')
-  printf "${D}[6/12]${N} "
+  printf "${D}[6/14]${N} "
   ask "Rótulo curto do fuso secundário (ex: IT, NY, JP)?" "$DEFAULT_SEC_LABEL" SECONDARY_TZ_LABEL
 else
-  printf "${D}[5/12 + 6/12 pulados — sem fuso secundário]${N}\n"
+  printf "${D}[5/14 + 6/14 pulados — sem fuso secundário]${N}\n"
 fi
 
 # ── 7. Localização ────────────────────────────────────────────────────────────
-printf "${D}[7/12]${N} "
+printf "${D}[7/14]${N} "
 ask "Cidade/região para o ícone 📍?" "$SYS_CITY" LOCATION
 
 # ── 8. Emojis ─────────────────────────────────────────────────────────────────
-printf "${D}[8/12]${N} "
+printf "${D}[8/14]${N} "
 ask_yn "Mostrar emojis 🕐 📍 📅 (se sua fonte suportar)?" "s" SHOW_EMOJIS
 
 # ── 9. Data ───────────────────────────────────────────────────────────────────
-printf "${D}[9/12]${N} "
+printf "${D}[9/14]${N} "
 ask_yn "Mostrar linha 2 direita (dia da semana + data)?" "s" SHOW_DATE
 
 # ── 10. Idioma ────────────────────────────────────────────────────────────────
-printf "${D}[10/12]${N} ${B}Idioma para nome do dia/mês?${N}\n"
+printf "${D}[10/14]${N} ${B}Idioma para nome do dia/mês?${N}\n"
 printf "        Opções: ${D}pt_BR | es_ES | en_US | it_IT${N}\n"
 ask "        Idioma" "$SYS_LOCALE_BASE" LANG_BASE
 LANG_TIME="${LANG_BASE}.UTF-8"
 
 # ── 11. Margem direita ────────────────────────────────────────────────────────
-printf "${D}[11/12]${N} ${B}Margem direita (cols de respiro antes da parede)?${N}\n"
+printf "${D}[11/14]${N} ${B}Margem direita (cols de respiro antes da parede)?${N}\n"
 printf "        ${D}Aumente se vir corte (5 = default · 8+ pra split panes)${N}\n"
 ask "        Margem" "5" MARGIN_RIGHT
 
 # ── 12. Cor da identidade ─────────────────────────────────────────────────────
-printf "${D}[12/12]${N} ${B}Cor ANSI 256 da identidade default?${N}\n"
+printf "${D}[12/14]${N} ${B}Cor ANSI 256 da identidade default?${N}\n"
 printf "        Sugestões: ${D}39 azul · 208 laranja · 220 âmbar · 99 roxo · 250 cinza${N}\n"
 ask "        Cor (0-255)" "250" IDENTITY_COLOR
+
+# ── 13. Identificação da janela ───────────────────────────────────────────────
+printf "${D}[13/14]${N} ${B}Identificação da janela na linha 1?${N}\n"
+printf "        ${D}Útil com várias janelas abertas: posição da aba (iTerm2) ou TTY + início do session_id${N}\n"
+ask_yn "        Mostrar" "n" SHOW_WINDOW_ID
+
+# ── 14. Sentinela de contexto ─────────────────────────────────────────────────
+printf "${D}[14/14]${N} ${B}Sentinela de contexto?${N}\n"
+printf "        ${D}Avisa o Claude uma vez em 70%% e em 85%% de contexto (registra um hook UserPromptSubmit)${N}\n"
+ask_yn "        Ativar" "n" CONTEXT_SENTINEL
 
 # ── Resumo + confirmação ──────────────────────────────────────────────────────
 printf "\n${C}═══════════════════════════════════════════════════════════════${N}\n"
@@ -155,6 +165,8 @@ printf "  Mostra data      : %s\n" "$([[ $SHOW_DATE == 1 ]] && echo sim || echo 
 printf "  Idioma data      : %s\n" "$LANG_TIME"
 printf "  Margem direita   : %s\n" "$MARGIN_RIGHT"
 printf "  Cor identidade   : ANSI 256-%s\n" "$IDENTITY_COLOR"
+printf "  Id. da janela    : %s\n" "$([[ $SHOW_WINDOW_ID == 1 ]] && echo sim || echo não)"
+printf "  Sentinela        : %s\n" "$([[ $CONTEXT_SENTINEL == 1 ]] && echo sim || echo não)"
 printf "${C}═══════════════════════════════════════════════════════════════${N}\n\n"
 
 ask_yn "Confirma e instala?" "s" CONFIRM
@@ -193,6 +205,9 @@ LANG_TIME="$LANG_TIME"
 MARGIN_RIGHT=$MARGIN_RIGHT
 IDENTITY_COLOR=$IDENTITY_COLOR
 MIN_COLS_FOR_RIGHT_BLOCK=100
+SHOW_WINDOW_ID=$SHOW_WINDOW_ID
+WINDOW_ID_PARTS="pos sid"
+CONTEXT_SENTINEL=$CONTEXT_SENTINEL
 EOF
 printf "  ${G}✓${N} Config em %s\n" "$CONFIG_DEST"
 
@@ -216,6 +231,21 @@ else
   printf "  ${G}✓${N} %s atualizado (backup .bak preservado)\n" "$SETTINGS"
 fi
 
+HOOK_DEST="$CONFIG_DIR/sentinela-contexto.sh"
+if [[ "$CONTEXT_SENTINEL" == "1" ]]; then
+  cp "$REPO_DIR/hooks/sentinela-contexto.sh" "$HOOK_DEST"
+  chmod +x "$HOOK_DEST"
+  # Acrescenta o hook sem tocar nos que já existem e sem duplicar em reinstalação
+  tmp=$(mktemp)
+  jq --arg cmd "bash $HOOK_DEST" '
+    .hooks.UserPromptSubmit = (
+      (.hooks.UserPromptSubmit // [])
+      | if any(.[]; any(.hooks[]?; .command == $cmd)) then .
+        else . + [{"hooks": [{"type": "command", "command": $cmd}]}] end
+    )' "$SETTINGS" > "$tmp" && mv "$tmp" "$SETTINGS"
+  printf "  ${G}✓${N} Sentinela de contexto registrada (hook UserPromptSubmit)\n"
+fi
+
 printf "\n${B}→ Preview da sua Chronos AD:${N}\n\n"
 TEST_OUT=$(echo '{"cwd":"'"$HOME"'/projeto-exemplo","model":{"display_name":"Opus 4.7 (1M context)"},"context_window":{"used_percentage":15,"context_window_size":1000000},"rate_limits":{"five_hour":{"used_percentage":8},"seven_day":{"used_percentage":12}}}' | COLUMNS=140 bash "$SCRIPT_DEST" 2>&1 || true)
 if [[ -n "$TEST_OUT" ]]; then
@@ -234,4 +264,7 @@ printf "    4. Reconfigurar: bash %s/install.sh\n\n" "$REPO_DIR"
 printf "  ${B}Desinstalar:${N}\n"
 printf "    rm -rf %s\n" "$CONFIG_DIR"
 printf "    edite %s e remova a chave 'statusLine'\n" "$SETTINGS"
+if [[ "$CONTEXT_SENTINEL" == "1" ]]; then
+  printf "    e, em 'hooks.UserPromptSubmit', a entrada que aponta para sentinela-contexto.sh\n"
+fi
 printf "${C}═══════════════════════════════════════════════════════════════${N}\n\n"
